@@ -1,0 +1,33 @@
+#! /bin/bash
+#
+# Extract information about recent failed logins.
+#
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ];then
+cat << EOF
+Usage: authfails <option>
+
+Run with no options to get a list of username/IP combinations that have attempted 
+and failed to log in.
+
+Options:
+
+  topusers    - List the top attempted usernames.
+  topips      - List the top IP addresses that have attempted to log in.
+  topattempts - List the top username/IP combos that have attempted to log in.
+
+EOF
+exit
+fi
+
+failData=$(zgrep -e "Failed password for" -e "invalid user" /var/log/auth.lo* | grep -v "preauth" | sed -e 's/Failed password for //g' -e 's/invalid user //g' | awk '{ print $1" "$2" "$3" "$6" "$8 }' | cut -d':' -f2-100)
+
+if [ "$1" == "topusers" ];then
+  echo "$failData" | sort | awk '{ print $4 }' | uniq -c | sort -n
+elif [ "$1" == "topips" ];then
+  echo "$failData" | sort | awk '{ print $5 }' | uniq -c | sort -n
+elif [ "$1" == "topattempts" ];then
+  echo "$failData" | awk '{ print $4" "$5 }' | sort | uniq -c | sort -n
+else
+  echo "$failData"
+fi
